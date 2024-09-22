@@ -93,10 +93,8 @@ class DataGeneratorPickles(Sequence):
         # reset states if processing new velocity
         if self.prev_v != self.velocities[indices[0], 0]:
             self.model.reset_states()
-            self.model.layers[2].reset()
 
         self.prev_v = self.velocities[indices[0], 0]
-
 
         inputs = [self.x[indices].reshape(self.batch_size, self.steps), self.velocities[indices]]
         targets = self.y[indices].reshape(self.batch_size, self.steps)
