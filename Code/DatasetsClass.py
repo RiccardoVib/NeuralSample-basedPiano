@@ -64,7 +64,6 @@ class DataGeneratorPickles(Sequence):
         #########
 
         self.y = self.y[:, :self.lim].reshape(-1, steps)
-        #self.S = self.S[:, :lim].reshape(-1, steps)
         self.x = np.repeat(x, self.n_note, axis=0)
         self.x = self.x[:, :self.lim].reshape(-1, steps)
 
@@ -75,9 +74,11 @@ class DataGeneratorPickles(Sequence):
         self.on_epoch_end()
 
     def on_epoch_end(self):
+        # create/reset the vector containing the indices of the batches
         self.indices = np.arange(self.velocities.shape[0])
 
     def __len__(self):
+        # compute the needed number of iteration before conclude one epoch
         return int(self.velocities.shape[0]/self.batch_size)
 
     def __call__(self):
@@ -87,9 +88,9 @@ class DataGeneratorPickles(Sequence):
                 self.on_epoch_end()
 
     def __getitem__(self, idx):
-
+        # get the indices of the requested batch
         indices = self.indices[idx * self.batch_size:(idx + 1) * self.batch_size]
-
+        # reset states if processing new velocity
         if self.prev_v != self.velocities[indices[0], 0]:
             self.model.reset_states()
             self.model.layers[2].reset()
