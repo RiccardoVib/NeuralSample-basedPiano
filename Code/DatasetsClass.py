@@ -17,7 +17,7 @@ class DataGeneratorPickles(Sequence):
           :param data_dir: the directory in which data are stored
           :param set: which type of set
           :param steps: the number of timesteps per iteration
-          :param steps: the neural model
+          :param model: the neural model
           :param batch_size: The size of each batch returned by __getitem__
         """
         data = open(os.path.normpath('/'.join([data_dir, filename + '.pickle'])), 'rb')
