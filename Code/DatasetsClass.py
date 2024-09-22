@@ -13,8 +13,11 @@ class DataGeneratorPickles(Sequence):
     def __init__(self, filename, data_dir, set, steps, model, batch_size=2800, type=np.float64):
         """
         Initializes a data generator object
+          :param filename: the name of the dataset
           :param data_dir: the directory in which data are stored
-          :param output_size: output size
+          :param set: which type of set
+          :param steps: the number of timesteps per iteration
+          :param steps: the neural model
           :param batch_size: The size of each batch returned by __getitem__
         """
         data = open(os.path.normpath('/'.join([data_dir, filename + '.pickle'])), 'rb')
