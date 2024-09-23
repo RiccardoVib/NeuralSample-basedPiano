@@ -38,10 +38,7 @@ class EnhancementLayerLSTM(tf.keras.layers.Layer):
           :param units: the number of size
         """
         super(EnhancementLayerLSTM, self).__init__()
-        self.bias = bias
         self.steps = steps
-        self.dim = dim
-        self.trainable = trainable
         self.type = type
         self.b_size = b_size
 
@@ -64,9 +61,7 @@ class EnhancementLayerMamba(tf.keras.layers.Layer):
           :param units: the number of size
         """
         super(EnhancementLayerMamba, self).__init__()
-        self.bias = bias
         self.steps = steps
-        self.dim = dim
         self.type = type
         self.b_size = b_size
 

@@ -1,6 +1,5 @@
 import os
 import tensorflow as tf
-from NFLossFunctions import STFT_loss, NMSELoss
 from DatasetsClass import DataGeneratorPickles
 from PianoModel import create_model
 from UtilsForTrainings import plotTraining, writeResults, checkpoints, render_results, MyLRScheduler
