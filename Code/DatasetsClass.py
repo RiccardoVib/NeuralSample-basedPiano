@@ -1,6 +1,5 @@
 import pickle
 import os
-from Utils import AttTime
 import librosa
 import numpy as np
 from tensorflow.keras.utils import Sequence
@@ -10,76 +9,64 @@ import matplotlib.pyplot as plt
 
 class DataGeneratorPickles(Sequence):
 
-    def __init__(self, filename, data_dir, set, steps, model, batch_size=2800, type=np.float64):
+    def __init__(self, filename, data_dir, cond_dim, model, mini_batch_size=2048, batch_size=8, stateful=False,
+                 type=np.float64):
         """
         Initializes a data generator object
-          :param filename: the name of the dataset
           :param data_dir: the directory in which data are stored
-          :param set: which type of set
-          :param steps: the number of timesteps per iteration
-          :param model: the neural model
+          :param output_size: output size
           :param batch_size: The size of each batch returned by __getitem__
         """
         data = open(os.path.normpath('/'.join([data_dir, filename + '.pickle'])), 'rb')
         Z = pickle.load(data)
-        y, keys, velocities = Z[set]
-        if set == 'train':
-
-            #lower
-            # x = y[6:7] #lower 6:7, max 8:9, mid 7:8
-            # y = np.delete(y, 6, axis=0) #8,7
-            # velocities = np.delete(velocities, 6, axis=0) #8,7
-
-            #max
-            x = y[8:9] #lower 6:7, max 8:9, mid 7:8
-            y = np.delete(y, 8, axis=0) #8,7
-            velocities = np.delete(velocities, 8, axis=0) #8,7
-            y_v, _, velocities_v = Z['val']
-            y = np.concatenate([y, y_v], axis=0)
-            velocities = np.concatenate([velocities, velocities_v], axis=0)
-
-        if set == 'val':
-            xy, _, velocities_x = Z['train']
-            #lower
-            # x = x[6:7]
-            # max
-            x = xy[8:9]
-            y = xy[5:6]
-            velocities = velocities_x[5:6]
+        z = Z['z']
+        y = Z['y']
+        # x_min = Z['x_min']
+        x_max = Z['x_max']
 
         self.filename = filename
         self.batch_size = batch_size
-        self.steps = steps
+        self.mini_batch_size = mini_batch_size
+        self.cond_dim = cond_dim
+        self.model = model
         self.y = np.array(y, dtype=type)
-        self.x = np.array(x, dtype=type)
-        self.ratio = y.shape[1] // (steps)
-
-        self.lim = self.ratio//self.batch_size*self.batch_size
-        self.ratio = self.lim // (steps)
-
-        ###metadata
-        self.velocities = velocities.reshape(-1, 1)/111
-        self.n_note = self.velocities.shape[0]
+        self.x = np.array(x_max, dtype=type)
+        self.ratio = y.shape[1] // (mini_batch_size)
+        self.stateful = stateful
+        self.lim = self.ratio * self.mini_batch_size
 
         #########
 
-        self.y = self.y[:, :self.lim].reshape(-1, steps)
-        self.x = np.repeat(x, self.n_note, axis=0)
-        self.x = self.x[:, :self.lim].reshape(-1, steps)
+        self.y = self.y[:, :self.lim]
+        self.x = self.x[:, :self.lim]
 
-        self.velocities = np.repeat(self.velocities, self.ratio, axis=0).reshape(-1, 1)
+        self.idj = 0
+        self.idx = -1
+
+        self.max_1 = (self.x.shape[1] // self.mini_batch_size) - 1
+        self.max_2 = (self.x.shape[0] // self.batch_size)
+        self.max = self.max_1 * self.max_2
+        self.training_steps = self.max
+
+        self.z = np.repeat(z[:, np.newaxis, :], self.y.shape[1], axis=1)
 
         self.prev_v = None
+        self.prev_k = None
         self.model = model
         self.on_epoch_end()
 
     def on_epoch_end(self):
-        # create/reset the vector containing the indices of the batches
-        self.indices = np.arange(self.velocities.shape[0])
+        self.indices = np.arange(self.z.shape[1])
+        self.indices2 = np.arange(0, self.z.shape[0])
+        self.idj = 0
+        self.idx = -1
+        self.model.reset_states()
+        if self.stateful:
+            self.model.layers[1].reset_states()
+            #self.model.layers[5].reset_states()
 
     def __len__(self):
-        # compute the needed number of iteration before conclude one epoch
-        return int(self.velocities.shape[0]/self.batch_size)
+        return int(self.max)
 
     def __call__(self):
         for i in range(self.__len__()):
@@ -88,15 +75,34 @@ class DataGeneratorPickles(Sequence):
                 self.on_epoch_end()
 
     def __getitem__(self, idx):
+
+        if idx == 0:
+            self.idj = 0
+            self.idx = -1
+
+        if idx % self.max_1 - 1 == 0 and idx != 1:
+            self.idj += 1
+            self.idx = -1
+
+        self.idx += 1
+
         # get the indices of the requested batch
-        indices = self.indices[idx * self.batch_size:(idx + 1) * self.batch_size]
-        # reset states if processing new velocity
-        if self.prev_v != self.velocities[indices[0], 0]:
-            self.model.reset_states()
+        indices = self.indices[self.idx * self.mini_batch_size:(self.idx + 1) * self.mini_batch_size]
+        indices2 = self.indices2[self.idj * self.batch_size:(self.idj + 1) * self.batch_size]
 
-        self.prev_v = self.velocities[indices[0], 0]
+        if self.prev_k != self.z[indices2[0], indices[0], 0] and self.prev_v != self.z[indices2[0], indices[0], 1]:
+            if self.stateful:
+                self.model.reset_states()
+                self.model.layers[1].reset_states()
 
-        inputs = [self.x[indices].reshape(self.batch_size, self.steps), self.velocities[indices]]
-        targets = self.y[indices].reshape(self.batch_size, self.steps)
+        X = self.x[indices2]
+        X = X[:, indices]
+        Y = self.y[indices2]
+        Y = Y[:, indices]
+        Z = self.z[indices2]
+        Z = Z[:, indices]
 
-        return (inputs, (targets))
+        self.prev_v = self.z[indices2[0], indices[0], 1]
+        self.prev_k = self.z[indices2[0], indices[0], 0]
+
+        return [X, Z], Y

@@ -2,7 +2,7 @@ import os
 import tensorflow as tf
 from DatasetsClass import DataGeneratorPickles
 from PianoModel import create_model
-from UtilsForTrainings import plotTraining, writeResults, checkpoints, render_results, MyLRScheduler
+from UtilsForTrainings import plotTraining, writeResults, checkpoints, predictWaves
 import random
 import numpy as np
 
@@ -28,6 +28,9 @@ def train(data_dir, **kwargs):
     filename = kwargs.get('filename', '')
     model_type = kwargs.get('model_type', '')
     epochs = kwargs.get('epochs', 1)
+    cond_dim = kwargs.get('cond_dim', 1)
+    mini_batch_size = kwargs.get('mini_batch_size', 1)
+    units = kwargs.get('units', 1)
 
     num_steps = 1
     fs = 48000
@@ -46,28 +49,27 @@ def train(data_dir, **kwargs):
     # tf.config.experimental.set_virtual_device_configuration(gpu, [tf.config.experimental.VirtualDeviceConfiguration(memory_limit=18000)])
     print("Num GPUs Available: ", len(tf.config.list_physical_devices('GPU')))
 
-    # create the DataGenerator object to retrive the data in the test set
-    train_gen = DataGeneratorPickles(filename, data_dir, set='train', steps=num_steps, model=None, batch_size=batch_size)
-    
-    # the number of total training steps
-    training_steps = train_gen.lim*9
-    # define the Adam optimizer with initial learning rate, training steps
-    opt = tf.keras.optimizers.Adam(learning_rate=MyLRScheduler(learning_rate, training_steps))
+    opt = tf.keras.optimizers.Adam(learning_rate=learning_rate)
+    print('learning_rate:', learning_rate)
+    print('\n')
     
     # create the model
-    model = create_model(1, num_steps, 16, b_size=batch_size, model_type=model_type)
+    model = create_model(cond_dim=cond_dim, model_type=model_type, mini_batch_size=mini_batch_size, units=units,
+                         b_size=batch_size)
+
+    model.compile(loss='mse', optimizer=opt)
+
+    train_gen = DataGeneratorPickles(filename + '_train', data_dir, mini_batch_size=mini_batch_size,
+                                     cond_dim=cond_dim, model=model,
+                                     batch_size=batch_size)
+    test_gen = DataGeneratorPickles(filename + '_test', data_dir, mini_batch_size=mini_batch_size,
+                                    cond_dim=cond_dim, model=model,
+                                    batch_size=batch_size)
     # compile the model
     model.compile(loss='mse', optimizer=opt)
 
     print('learning_rate:', learning_rate)
     print('\n')
-    print('training_steps:', training_steps)
-    print('\n')
-
-    train_gen = DataGeneratorPickles(filename, data_dir, set='train', steps=num_steps, model=model,
-                                     batch_size=batch_size)
-    test_gen = DataGeneratorPickles(filename, data_dir, set='val', steps=num_steps, model=model,
-                                    batch_size=batch_size)
     
     # define callbacks: where to store the weights
     callbacks = []
@@ -105,6 +107,7 @@ def train(data_dir, **kwargs):
                                 epochs=1,
                                 verbose=0,
                                 callbacks=callbacks)
+
             print(model.optimizer.learning_rate)
             # store the training and validation loss
             loss_training[i] = (results.history['loss'])[-1]
@@ -138,16 +141,40 @@ def train(data_dir, **kwargs):
                                verbose=0,
                                return_dict=True)
     results = {'test_loss': test_loss}
+
+    model = create_model(cond_dim=cond_dim, model_type=model_type, mini_batch_size=mini_batch_size, units=units,
+                         b_size=1, stateful=True)
+    best = tf.train.latest_checkpoint(ckpt_dir)
+    if best is not None:
+        print("Restored weights from {}".format(ckpt_dir))
+        model.load_weights(best).expect_partial()
+
+    test_gen = DataGeneratorPickles(filename + '_test', data_dir, mini_batch_size=mini_batch_size, cond_dim=cond_dim,
+                                    model=model, batch_size=1, stateful=True)
+
     model.reset_states()
     # predict the test set
-    pred = model.predict(test_gen, verbose=0)
+    pred = model.predict(test_gen, verbose=0)[:].flatten()
+    lim = test_gen.max_1*test_gen.mini_batch_size
 
-    # plot and render the output audio file, together with the input and target
-    render_results(pred, test_gen.x, test_gen.y, model_save_dir, save_folder, fs)
+    y = test_gen.y[:, :lim].reshape(-1)
+
+    predictWaves(pred, test_gen.x[:, :lim].reshape(-1), y, model_save_dir, save_folder, fs, 'S')
+
+    with open(os.path.normpath('/'.join([model_save_dir, save_folder, 'results.txt'])), 'w') as f:
+        for key, value in results.items():
+            print('\n', key, '  : ', value, file=f)
     
     # writhe and store the metrics values
     with open(os.path.normpath('/'.join([model_save_dir, save_folder, 'results.txt'])), 'w') as f:
         for key, value in results.items():
             print('\n', key, '  : ', value, file=f)
+
+    return 42
+
+
+
+
+
 
     return 42
