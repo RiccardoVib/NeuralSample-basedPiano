@@ -32,7 +32,6 @@ def train(data_dir, **kwargs):
     mini_batch_size = kwargs.get('mini_batch_size', 1)
     units = kwargs.get('units', 1)
 
-    num_steps = 1
     fs = 48000
 
     # tf.keras.backend.set_floatx('float64')
@@ -165,16 +164,9 @@ def train(data_dir, **kwargs):
         for key, value in results.items():
             print('\n', key, '  : ', value, file=f)
     
-    # writhe and store the metrics values
+    # write and store the metrics values
     with open(os.path.normpath('/'.join([model_save_dir, save_folder, 'results.txt'])), 'w') as f:
         for key, value in results.items():
             print('\n', key, '  : ', value, file=f)
-
-    return 42
-
-
-
-
-
 
     return 42

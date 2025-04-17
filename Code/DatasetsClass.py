@@ -1,10 +1,7 @@
 import pickle
 import os
-import librosa
 import numpy as np
 from tensorflow.keras.utils import Sequence
-import tensorflow as tf
-import matplotlib.pyplot as plt
 
 
 class DataGeneratorPickles(Sequence):
@@ -63,7 +60,6 @@ class DataGeneratorPickles(Sequence):
         self.model.reset_states()
         if self.stateful:
             self.model.layers[1].reset_states()
-            #self.model.layers[5].reset_states()
 
     def __len__(self):
         return int(self.max)
