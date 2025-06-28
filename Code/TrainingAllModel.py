@@ -24,8 +24,8 @@ def train(data_dir, **kwargs):
     model_save_dir = kwargs.get('model_save_dir', '../../../TrainedModels')
     save_folder = kwargs.get('save_folder', 'ED_Testing')
     batch_size = kwargs.get('batch_size', None)
+    dataset = kwargs.get('dataset', None)
     inference = kwargs.get('inference', False)
-    filename = kwargs.get('filename', '')
     model_type = kwargs.get('model_type', '')
     epochs = kwargs.get('epochs', 1)
     cond_dim = kwargs.get('cond_dim', 1)
@@ -58,10 +58,10 @@ def train(data_dir, **kwargs):
 
     model.compile(loss='mse', optimizer=opt)
 
-    train_gen = DataGeneratorPickles(filename + '_train', data_dir, mini_batch_size=mini_batch_size,
+    train_gen = DataGeneratorPickles(dataset + '_train', data_dir, mini_batch_size=mini_batch_size,
                                      cond_dim=cond_dim, model=model,
                                      batch_size=batch_size)
-    test_gen = DataGeneratorPickles(filename + '_test', data_dir, mini_batch_size=mini_batch_size,
+    test_gen = DataGeneratorPickles(dataset + '_test', data_dir, mini_batch_size=mini_batch_size,
                                     cond_dim=cond_dim, model=model,
                                     batch_size=batch_size)
     # compile the model
@@ -148,7 +148,7 @@ def train(data_dir, **kwargs):
         print("Restored weights from {}".format(ckpt_dir))
         model.load_weights(best).expect_partial()
 
-    test_gen = DataGeneratorPickles(filename + '_test', data_dir, mini_batch_size=mini_batch_size, cond_dim=cond_dim,
+    test_gen = DataGeneratorPickles(dataset + '_test', data_dir, mini_batch_size=mini_batch_size, cond_dim=cond_dim,
                                     model=model, batch_size=1, stateful=True)
 
     model.reset_states()

@@ -1,34 +1,61 @@
-from TrainingAllModel import train
+from Training import train
+import argparse
+
 
 """
 main script
 
 """
+def parse_args():
+    parser = argparse.ArgumentParser(description='Trains Neural PCM networks. Can also be used to run pure inference.')
 
-DATA_DIR = '../../Files/All/'  #### Dataset folder
-MODEL_SAVE_DIR = '../../TrainedModels'  #### Models folder
-INFERENCE = False ### if no training needed
-STEPS = 1 ### number of timesteps per iteration
-LR = 3e-4 ### initial learning rate
-batch_size = 512
+    parser.add_argument('--model_save_dir', default='./models', type=str, nargs='?', help='Folder directory in which to store the trained models.')
 
-keys = ['A0', 'B1', 'C2', 'D3', 'E4', 'F5', 'G6', 'A#7']
+    parser.add_argument('--data_dir', default='./datasets', type=str, nargs='?', help='Folder directory in which the datasets are stored.')
 
-models = ['LSTM', 'S6']
+    parser.add_argument('--datasets', default=" ", type=str, nargs='+', help='The names of the datasets to use. [OSCMonoSquare, OSCMonoTri, OSCMonoSaw]')
 
-for key in keys:
-    for model in models:
-        filename = 'DatasetSingleNoteFilter_' + key
+    parser.add_argument('--model_type', default=" ", type=str, nargs='+', help='The name of the model to train (S6, LSTM).')
 
-        MODEL_NAME = filename + '_' + model + ''  #### Model name
+    parser.add_argument('--cond_dim', default=1, type=int, nargs='+', help='Dimension of conditioning vector.')
 
-        train(data_dir=DATA_DIR,
-              filename=filename,
-              save_folder=MODEL_NAME,
-              model_save_dir=MODEL_SAVE_DIR,
-              learning_rate=LR,
-              epochs=1000,
-              model_type=model,
-              batch_size=batch_size,
-              num_steps=STEPS,
-              inference=INFERENCE)
+    parser.add_argument('--epochs', default=60, type=int, nargs='?', help='Number of training epochs.')
+
+    parser.add_argument('--batch_size', default=8, type=int, nargs='?', help='Batch size.')
+
+    parser.add_argument('--mini_batch_size', default=2024, type=int, nargs='?', help='Number of samples to process each iteration.')
+
+    parser.add_argument('--units', default=64, nargs='+', type=int, help='Hidden layer size (amount of units) of the network.')
+
+    parser.add_argument('--learning_rate', default=3e-4, type=float, nargs='?', help='Initial learning rate.')
+
+    parser.add_argument('--only_inference', default=False, type=bool, nargs='?', help='When True, skips training and runs only inference on the pre-model. When False, runs training and inference on the trained model.')
+
+    return parser.parse_args()
+
+
+def start_train(args):
+
+    print("######### Preparing for training/inference #########")
+    print("\n")
+
+    train(data_dir=args.data_dir,
+          model_save_dir=args.model_save_dir,
+          save_folder=f'{args.model_type}_{args.dataset}_{args.units}',
+          dataset=args.datasets,
+          model_type=args.model_type,
+          cond_dim=args.cond_dim,
+          epochs=args.epochs,
+          batch_size=args.batch_size,
+          mini_batch_size=args.mini_batch_size,
+          units=args.units,
+          learning_rate=args.learning_rate,
+          inference=args.only_inference)
+
+
+def main():
+    args = parse_args()
+    start_train(args)
+
+if __name__ == '__main__':
+    main()
