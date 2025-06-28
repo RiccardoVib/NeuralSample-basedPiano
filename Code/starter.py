@@ -1,4 +1,4 @@
-from Training import train
+from TrainingAllModel import train
 import argparse
 
 
