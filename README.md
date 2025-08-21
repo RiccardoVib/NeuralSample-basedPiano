@@ -6,6 +6,20 @@ This repository contains all the necessary utilities to use our architectures. F
 
 Visit our [companion page with audio examples](https://riccardovib.github.io/NeuralSample-basedPiano_pages/)
 
+### Folder Structure
+
+```
+./
+├── Code
+└── Weights
+    ├── T1
+    │   ├── LSTM
+    │   └── S6
+    └── T2
+        ├── LSTM
+        └── S6
+```
+
 ### Contents
 
 1. [Datasets](#datasets)
