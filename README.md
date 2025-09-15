@@ -37,7 +37,7 @@ Our architectures were evaluated on two type of piano: Upright and Grand piano.
 
 # How To Train and Run Inference 
 
-This code relies on TensorFlow.
+This code relies on Python 3.9 and TensorFlow.
 First, install Python dependencies:
 ```
 cd ./code
