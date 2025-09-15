@@ -1,6 +1,6 @@
 # Neural Sampled-based Piano Synthesis
 
-This code repository is for the article _Neural Sampled-based Piano Synthesis_, accepted at .
+This code repository is for the article _Neural Sampled-based Piano Synthesis_, Proceedings of the International Conference on Digital Audio Effects (DAFx25).
 
 This repository contains all the necessary utilities to use our architectures. Find the code located inside the "./Code" folder, and the weights of pre-trained models inside the "./Weights" folder
 
