@@ -79,7 +79,7 @@ python starter.py --datasets DatasetSingleNoteFilter_ --model S6 --only_inferenc
 
 # VST Download
 
-Coming soon...
+[VST](https://github.com/RiccardoVib/NeuralModelsVST/tree/main/NeuralPiano)
 
 
 # Bibtex
